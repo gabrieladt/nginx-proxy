@@ -46,7 +46,7 @@ upstream {{ $host }} {
 	{{ if eq $addrLen 1 }}
 		{{ with $address := index $container.Addresses 0 }}
 		   # {{$container.Name}}
-		   server {{ $address.IP }}:{{ $address.Port }};
+		   server {{ $address.IP }}:{{ $address.HostPort }};
 		{{ end }}
 	{{/* If more than one port exposed, use the one matching VIRTUAL_PORT env var */}}
 	{{ else if $container.Env.VIRTUAL_PORT }}

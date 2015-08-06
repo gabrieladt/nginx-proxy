@@ -31,12 +31,6 @@ proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
 
-server {
-	listen 80;
-	server_name _; # This is just an invalid value which will never trigger on a real hostname.
-	return 503;
-}
-
 {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
 
 upstream {{ $host }} {
@@ -46,7 +40,7 @@ upstream {{ $host }} {
 	{{ if eq $addrLen 1 }}
 		{{ with $address := index $container.Addresses 0 }}
 		   # {{$container.Name}}
-		   server {{ $address.IP }}:{{ $address.Port }};
+		   server {{ $address.IP }}:{{ $address.Port }} max_fails=2 fail_timeout=10s;
 		{{ end }}
 	{{/* If more than one port exposed, use the one matching VIRTUAL_PORT env var */}}
 	{{ else if $container.Env.VIRTUAL_PORT }}
@@ -129,13 +123,17 @@ server {
 	{{ if $.Env.DEFAULT_HOST }}
 	  {{ if eq $.Env.DEFAULT_HOST $host }}
 	    listen 80 default_server;
-	    server_name {{ $host }};
+	   # server_name {{ $host }};
+		server_name _;
 	  {{ else }}
 	    server_name {{ $host }};
           {{ end }}
 	{{ else }}
 	  server_name {{ $host }};
 	{{ end }}
+	proxy_connect_timeout   5;
+	proxy_send_timeout      5;
+	proxy_read_timeout      5;
 
 	{{ if (exists (printf "/etc/nginx/vhost.d/%s" $host)) }}
 	include {{ printf "/etc/nginx/vhost.d/%s" $host }};
